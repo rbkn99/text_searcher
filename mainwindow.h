@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <memory>
 #include <QFuture>
+#include <QSet>
 #include "scanner.h"
 
 namespace Ui {
@@ -31,7 +32,7 @@ private slots:
     void update_progress_bar(int value);
     void cancel_clicked();
     void indexing_finished();
-    void new_text_file(const QString&);
+    void print_text_files(const QSet<QString>&);
     void search_clicked();
     void searching_finished();
     void update_window(const QString& filename, const vector<int>& occurrences);

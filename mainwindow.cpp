@@ -18,8 +18,7 @@ main_window::main_window(QWidget *parent)
         : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
     setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), qApp->desktop()->availableGeometry()));
-    ui->treeWidget->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-    ui->treeWidget->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    ui->treeWidget->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
 
     QCommonStyle style;
     ui->actionScan_Directory->setIcon(style.standardIcon(QCommonStyle::SP_DialogOpenButton));
@@ -34,6 +33,7 @@ main_window::main_window(QWidget *parent)
     connect(ui->actionAbout, &QAction::triggered, this, &main_window::show_about_dialog);
 
     qRegisterMetaType<vector<QString>>("vector<QString>");
+    qRegisterMetaType<QSet<QString>>("QSet<QString>");
     qRegisterMetaType<vector<int>>("vector<int>");
 
     connect(this, SIGNAL(exception_occurred(
@@ -49,10 +49,10 @@ main_window::main_window(QWidget *parent)
                                const QString&)),
             this, SLOT(log_info(
                                const QString&)));
-    connect(&s, SIGNAL(new_text_file(
-                               const QString&)),
-            this, SLOT(new_text_file(
-                               const QString&)));
+    connect(&s, SIGNAL(all_new_text_files(
+                               const QSet<QString>&)),
+            this, SLOT(print_text_files(
+                               const QSet<QString>&)));
     connect(&s, SIGNAL(progress_updated(int)),
             this, SLOT(update_progress_bar(int)));
     connect(&s, SIGNAL(indexing_finished()),
@@ -78,10 +78,12 @@ void main_window::select_directory() {
     scan_directory(dir);
 }
 
-void main_window::new_text_file(const QString &name) {
-    auto *f = new QTreeWidgetItem(ui->treeWidget);
-    f->setText(0, name);
-    ui->treeWidget->addTopLevelItem(f);
+void main_window::print_text_files(const QSet<QString> &names) {
+    for (auto& name : names) {
+        auto *f = new QTreeWidgetItem(ui->treeWidget);
+        f->setText(0, name);
+        ui->treeWidget->addTopLevelItem(f);
+    }
 }
 
 void main_window::clear_layout(QLayout *layout) {
@@ -139,7 +141,7 @@ void main_window::update_window(const QString &filename, const vector<int> &occu
     std::sort(cp_occur.begin(), cp_occur.end());
     for (const auto &occur: cp_occur) {
         auto *item = new QTreeWidgetItem(f);
-        item->setText(1, QString::number(occur));
+        item->setText(0, QString::number(occur));
     }
 }
 

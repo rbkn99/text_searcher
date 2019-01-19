@@ -60,7 +60,7 @@ signals:
     void info_message(const QString& message);
     void progress_updated(int value);
     void indexing_finished();
-    void new_text_file(const QString&);
+    void all_new_text_files(const QSet<QString>&);
     void searching_finished();
     void update_results(const QString&, const vector<int>&);
 };

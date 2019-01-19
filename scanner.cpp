@@ -64,7 +64,6 @@ void scanner::to_trigrams(const QByteArray &absolute_path) {
         }
         else {
             text_file_names.insert(absolute_path);
-            emit new_text_file(dir.relativeFilePath(absolute_path));
             if (!watcher.addPath(absolute_path)) {
                 emit exception_occurred("Cannot watch the file " + dir.relativeFilePath(absolute_path));
             }
@@ -105,6 +104,7 @@ void scanner::scan(QDir const &dir) {
     emit info_message("Collecting information about files...");
     index();
     overall_text_files_count = (uint)text_file_names.size();
+    emit all_new_text_files(text_file_names);
     emit info_message("Done! Total number of text files: " + QString::number(overall_text_files_count));
     emit indexing_finished();
 }

@@ -39,12 +39,7 @@
         </attribute>
         <column>
          <property name="text">
-          <string>File name</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Position</string>
+          <string>File/Position</string>
          </property>
         </column>
        </widget>
