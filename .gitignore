@@ -1,0 +1,5 @@
+.idea/
+cmake-build-debug/
+.directory
+mainwindow.ui.autosave
+text_searcher.pro.user
