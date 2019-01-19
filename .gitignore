@@ -3,3 +3,4 @@ cmake-build-debug/
 .directory
 mainwindow.ui.autosave
 text_searcher.pro.user
+tests/case1/Telegram

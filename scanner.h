@@ -10,26 +10,31 @@
 #include <QDebug>
 #include <QFuture>
 #include <QThread>
-#include <map>
+#include <QFileSystemWatcher>
+#include <QHash>
+#include <QSet>
+#include <unordered_map>
 #include <atomic>
 
 using std::string;
 using std::vector;
-using std::map;
 using std::pair;
 
 class scanner: public QObject {
     Q_OBJECT
 
-    using Trigrams = map<QString, size_t>;
+    using Trigrams = QHash<QString, size_t>;
 
     QDir dir;
     int current_progress;
     std::atomic_bool cancel_state;
     uint overall_files_count;
     uint overall_text_files_count;
-    map<QString, Trigrams> trigrams;
-    const size_t TEXT_FILE_THRESHOLD = 20000;
+    QFileSystemWatcher watcher;
+    QHash<QString, Trigrams> trigrams;
+    QSet<QString> text_file_names;
+
+    const int TEXT_FILE_THRESHOLD = 20000;
     const qint64 BIG_FILE_THRESHOLD = 512 * 1024;
     const int CHUNK_LEN = 1024 * 8;
 
@@ -48,6 +53,7 @@ public:
 
 public slots:
     void cancel();
+    void text_file_changed(const QString&);
 
 signals:
     void exception_occurred(const QString &message);

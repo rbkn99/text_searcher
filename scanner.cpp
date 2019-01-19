@@ -21,6 +21,19 @@ void scanner::init() {
     overall_files_count = 0;
     current_progress = 0;
     cancel_state = false;
+    connect(&watcher, SIGNAL(fileChanged(const QString&)), this, SLOT(text_file_changed(const QString&)));
+}
+
+void scanner::text_file_changed(const QString &filename) {
+    QFile f(filename);
+    text_file_names.remove(filename);
+    trigrams[filename].clear();
+    if (f.exists()) {
+        to_trigrams(filename);
+    }
+    else {
+        watcher.removePath(filename);
+    }
 }
 
 void scanner::cancel() {
@@ -31,7 +44,7 @@ void scanner::to_trigrams(const QString &absolute_path) {
     QFile f(absolute_path);
     if (f.open(QFile::ReadOnly)) {
         QByteArray chunk(CHUNK_LEN, ' ');
-        map<QString, size_t> &current_text_trigrams = trigrams[absolute_path];
+        QHash<QString, size_t> &current_text_trigrams = trigrams[absolute_path];
         QByteArray trigram_buffer(R"(\\\)");
         while (true) {
             qint64 actual_size = f.read(chunk.data(), CHUNK_LEN);
@@ -44,10 +57,14 @@ void scanner::to_trigrams(const QString &absolute_path) {
             }
         }
         if (current_text_trigrams.size() > TEXT_FILE_THRESHOLD) {
-            trigrams.erase(absolute_path);
+            trigrams[absolute_path].clear();
         }
         else {
+            text_file_names.insert(absolute_path);
             emit new_text_file(dir.relativeFilePath(absolute_path));
+            if (!watcher.addPath(absolute_path)) {
+                emit exception_occurred("Cannot watch the file " + dir.relativeFilePath(absolute_path));
+            }
         }
     } else {
         throw std::runtime_error("Cannot open the file");
@@ -84,13 +101,13 @@ void scanner::scan(QDir const &dir) {
     overall_files_count = dir.count();
     emit info_message("Collecting information about files...");
     index();
-    overall_text_files_count = (uint)trigrams.size();
+    overall_text_files_count = (uint)text_file_names.size();
     emit info_message("Done! Total number of text files: " + QString::number(overall_text_files_count));
     emit indexing_finished();
 }
 
-map<QString, size_t> scanner::split_into_trigrams(const QString &s) {
-    map<QString, size_t> trigrams;
+QHash<QString, size_t> scanner::split_into_trigrams(const QString &s) {
+    QHash<QString, size_t> trigrams;
     QString current_trigram = s.left(3);
     trigrams[current_trigram]++;
     for (int i = 3; i < s.size(); i++) {
@@ -131,8 +148,8 @@ vector<int> scanner::find_substr(const scanner::Trigrams &tg, const QString &fil
 
     if (needle.size() < 3) {
         bool found = false;
-        for (const auto& x: file_trigrams) {
-            if (x.first.contains(needle)) {
+        for (auto i = file_trigrams.begin(); i != file_trigrams.end(); i++) {
+            if (i.key().contains(needle)) {
                 found = true;
                 break;
             }
@@ -142,10 +159,10 @@ vector<int> scanner::find_substr(const scanner::Trigrams &tg, const QString &fil
         }
     }
     else {
-        for (const auto &trigram: tg) {
+        for (auto i = tg.begin(); i != tg.end(); i++) {
             //qDebug() << trigram.first << " " << trigram.second;
             //qDebug() << file_trigrams[trigram.first];
-            if (trigram.second > file_trigrams[trigram.first]) {
+            if (i.value() > file_trigrams[i.key()]) {
                 return occurrences;
             }
         }
@@ -178,19 +195,19 @@ void scanner::search(QString const &needle) {
     vector<QString> thread_file_names;
 
     size_t counter = 0;
-    for (auto &file_info: trigrams) {
+    for (auto& i : text_file_names) {
         if (cancel_state)
             break;
-        QFileInfo qFileInfo(file_info.first);
+        QFileInfo qFileInfo(i);
         if (qFileInfo.size() > BIG_FILE_THRESHOLD) {
-            thread_file_names.push_back(dir.relativeFilePath(file_info.first));
+            thread_file_names.push_back(dir.relativeFilePath(i));
              my_pool.push_back(QtConcurrent::run(this, &scanner::find_substr, needle_trigrams,
-                    file_info.first, needle));
+                    i, needle));
         }
         else {
-            auto result = find_substr(needle_trigrams, file_info.first, needle);
+            auto result = find_substr(needle_trigrams, i, needle);
             if (!result.empty()) {
-                emit update_results(dir.relativeFilePath(file_info.first), result);
+                emit update_results(dir.relativeFilePath(i), result);
             }
             update_progress(++counter, overall_text_files_count);
         }

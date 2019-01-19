@@ -106,7 +106,7 @@ void main_window::searching_finished() {
 
 void main_window::search_clicked() {
     QString text = ui->textEdit->toPlainText();
-    const size_t MAX_STR_LEN = 10000;
+    const int MAX_STR_LEN = 10000;
     if (text.isEmpty()) {
         emit exception_occurred("Text field mustn't be empty");
         return;
