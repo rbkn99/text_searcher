@@ -49,6 +49,7 @@ void scanner::to_trigrams(const QByteArray &absolute_path) {
         QHash<QByteArray, size_t> &current_text_trigrams = trigrams[absolute_path];
         QByteArray trigram_buffer(R"(\\\)");
         while (true) {
+            if (cancel_state) return;
             qint64 actual_size = f.read(chunk.data(), CHUNK_LEN);
             if (actual_size == 0 || current_text_trigrams.size() > TEXT_FILE_THRESHOLD) break;
             for (char c: chunk) {
