@@ -33,6 +33,7 @@ class scanner: public QObject {
     QFileSystemWatcher watcher;
     QHash<QByteArray, Trigrams> trigrams;
     QSet<QString> text_file_names;
+    bool max_socket_limit_reached;
 
     const int TEXT_FILE_THRESHOLD = 20000;
     const qint64 BIG_FILE_THRESHOLD = 512 * 1024;

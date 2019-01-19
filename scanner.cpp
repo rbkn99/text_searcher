@@ -22,6 +22,10 @@ void scanner::init() {
     overall_text_files_count = 0;
     current_progress = 0;
     cancel_state = false;
+    max_socket_limit_reached = false;
+    for (auto& x : text_file_names) {
+        watcher.removePath(x);
+    }
     connect(&watcher, SIGNAL(fileChanged(const QString&)), this, SLOT(text_file_changed(const QString&)));
 }
 
@@ -34,6 +38,7 @@ void scanner::text_file_changed(const QString &filename) {
         to_trigrams(ba);
     }
     else {
+        max_socket_limit_reached = false;
         watcher.removePath(filename);
     }
 }
@@ -64,8 +69,9 @@ void scanner::to_trigrams(const QByteArray &absolute_path) {
         }
         else {
             text_file_names.insert(absolute_path);
-            if (!watcher.addPath(absolute_path)) {
+            if (!max_socket_limit_reached && !watcher.addPath(absolute_path)) {
                 emit exception_occurred("Cannot watch the file " + dir.relativeFilePath(absolute_path));
+                max_socket_limit_reached = true;
             }
         }
     } else {
@@ -135,14 +141,14 @@ void scanner::KMP(const QByteArray &S, const QString &pattern, qint64 S_size, ve
         pf[i] = k;
     }
     for (int k = 0, i = 0; i < S_size; ++i) {
-        while ((k > 0) && (k < pattern.length()) && (pattern[k] != S[i]))
+        while ((k > 0) && (pattern[k] != S[i]))
             k = pf[k - 1];
         if (k == pattern.length()) {
             result.push_back(start_index + i - 2 * (unsigned int) pattern.length() + 3);
             k = pf[k - 1];
         }
         //qDebug() << k << " " << i << " " << S_size << " " << pattern.length() << " " << S.length() << " " << pattern.size() << " " << S.size();
-        if (k < pattern.length() && pattern[k] == S[i])
+        if ( pattern[k] == S[i])
             k++;
     }
 }
