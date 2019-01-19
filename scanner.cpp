@@ -19,17 +19,19 @@ void scanner::update_progress(size_t i, size_t overall_size) {
 void scanner::init() {
     trigrams.clear();
     overall_files_count = 0;
+    overall_text_files_count = 0;
     current_progress = 0;
     cancel_state = false;
     connect(&watcher, SIGNAL(fileChanged(const QString&)), this, SLOT(text_file_changed(const QString&)));
 }
 
 void scanner::text_file_changed(const QString &filename) {
+    QByteArray ba = filename.toUtf8();
     QFile f(filename);
     text_file_names.remove(filename);
-    trigrams[filename].clear();
+    trigrams[ba].clear();
     if (f.exists()) {
-        to_trigrams(filename);
+        to_trigrams(ba);
     }
     else {
         watcher.removePath(filename);
@@ -40,11 +42,11 @@ void scanner::cancel() {
     cancel_state = true;
 }
 
-void scanner::to_trigrams(const QString &absolute_path) {
+void scanner::to_trigrams(const QByteArray &absolute_path) {
     QFile f(absolute_path);
     if (f.open(QFile::ReadOnly)) {
         QByteArray chunk(CHUNK_LEN, ' ');
-        QHash<QString, size_t> &current_text_trigrams = trigrams[absolute_path];
+        QHash<QByteArray, size_t> &current_text_trigrams = trigrams[absolute_path];
         QByteArray trigram_buffer(R"(\\\)");
         while (true) {
             qint64 actual_size = f.read(chunk.data(), CHUNK_LEN);
@@ -83,7 +85,7 @@ void scanner::index() {
         }
         rel_path += it.fileName();
         try {
-            to_trigrams(it.fileInfo().absoluteFilePath());
+            to_trigrams(it.fileInfo().absoluteFilePath().toUtf8());
         }
         catch (const std::runtime_error &e) {
             QString message = (QString) e.what() + " " + it.fileName();
@@ -106,20 +108,21 @@ void scanner::scan(QDir const &dir) {
     emit indexing_finished();
 }
 
-QHash<QString, size_t> scanner::split_into_trigrams(const QString &s) {
-    QHash<QString, size_t> trigrams;
-    QString current_trigram = s.left(3);
+QHash<QByteArray, size_t> scanner::split_into_trigrams(const QString &s) {
+    QHash<QByteArray, size_t> trigrams;
+    auto sb = s.toUtf8();
+    QByteArray current_trigram = sb.left(3);
     trigrams[current_trigram]++;
-    for (int i = 3; i < s.size(); i++) {
+    for (int i = 3; i < sb.size(); i++) {
         current_trigram[0] = current_trigram[1];
         current_trigram[1] = current_trigram[2];
-        current_trigram[2] = s[i];
+        current_trigram[2] = sb[i];
         trigrams[current_trigram]++;
     }
     return trigrams;
 }
 
-void scanner::KMP(const QString &S, const QString &pattern, qint64 S_size, vector<int>& result, int start_index) {
+void scanner::KMP(const QByteArray &S, const QString &pattern, qint64 S_size, vector<int>& result, int start_index) {
     vector<int> pf((unsigned int)pattern.size());
 
     pf[0] = 0;
@@ -131,25 +134,27 @@ void scanner::KMP(const QString &S, const QString &pattern, qint64 S_size, vecto
         pf[i] = k;
     }
     for (int k = 0, i = 0; i < S_size; ++i) {
-        while ((k > 0) && (pattern[k] != S[i]))
+        while ((k > 0) && (k < pattern.length()) && (pattern[k] != S[i]))
             k = pf[k - 1];
-        if (pattern[k] == S[i])
-            k++;
         if (k == pattern.length()) {
             result.push_back(start_index + i - 2 * (unsigned int) pattern.length() + 3);
             k = pf[k - 1];
         }
+        //qDebug() << k << " " << i << " " << S_size << " " << pattern.length() << " " << S.length() << " " << pattern.size() << " " << S.size();
+        if (k < pattern.length() && pattern[k] == S[i])
+            k++;
     }
 }
 
 vector<int> scanner::find_substr(const scanner::Trigrams &tg, const QString &filename, const QString &needle) {
+    //qDebug() << filename;
     vector<int> occurrences;
-    auto &file_trigrams = trigrams[filename];
+    auto &file_trigrams = trigrams[filename.toUtf8()];
 
     if (needle.size() < 3) {
         bool found = false;
         for (auto i = file_trigrams.begin(); i != file_trigrams.end(); i++) {
-            if (i.key().contains(needle)) {
+            if (i.key().contains(needle.toStdString().data())) {
                 found = true;
                 break;
             }
@@ -179,6 +184,9 @@ vector<int> scanner::find_substr(const scanner::Trigrams &tg, const QString &fil
             }
             qint64 actual_size = f.read(buffer.data() + needle.size() - 1, CHUNK_LEN);
             if (actual_size == 0) break;
+            //qDebug() << "byte arr: " << buffer.size() << " " << actual_size + needle.size() - 1 << " " << QString(buffer).size();
+            //qDebug() << buffer;
+            //qDebug() << QString(buffer);
             KMP(buffer, needle, actual_size + needle.size() - 1, occurrences, start_index);
             start_index += actual_size;
         }

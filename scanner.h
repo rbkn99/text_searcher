@@ -23,7 +23,7 @@ using std::pair;
 class scanner: public QObject {
     Q_OBJECT
 
-    using Trigrams = QHash<QString, size_t>;
+    using Trigrams = QHash<QByteArray, size_t>;
 
     QDir dir;
     int current_progress;
@@ -31,7 +31,7 @@ class scanner: public QObject {
     uint overall_files_count;
     uint overall_text_files_count;
     QFileSystemWatcher watcher;
-    QHash<QString, Trigrams> trigrams;
+    QHash<QByteArray, Trigrams> trigrams;
     QSet<QString> text_file_names;
 
     const int TEXT_FILE_THRESHOLD = 20000;
@@ -40,10 +40,10 @@ class scanner: public QObject {
 
     void init();
     void index();
-    void to_trigrams(const QString &);
+    void to_trigrams(const QByteArray &);
     Trigrams split_into_trigrams(const QString&);
     void update_progress(size_t i, size_t overall_size);
-    void KMP(const QString &S, const QString &pattern, qint64 S_size, vector<int>& result, int start_index);
+    void KMP(const QByteArray &S, const QString &pattern, qint64 S_size, vector<int>& result, int start_index);
     vector<int> find_substr(const scanner::Trigrams &tg, const QString& filename, const QString& needle);
 
 
