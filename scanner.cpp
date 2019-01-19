@@ -141,14 +141,14 @@ void scanner::KMP(const QByteArray &S, const QString &pattern, qint64 S_size, ve
         pf[i] = k;
     }
     for (int k = 0, i = 0; i < S_size; ++i) {
-        while ((k > 0) && (pattern[k] != S[i]))
+        while ((k > 0) && (k < pattern.length()) && (pattern[k] != S[i]))
             k = pf[k - 1];
         if (k == pattern.length()) {
             result.push_back(start_index + i - 2 * (unsigned int) pattern.length() + 3);
             k = pf[k - 1];
         }
         //qDebug() << k << " " << i << " " << S_size << " " << pattern.length() << " " << S.length() << " " << pattern.size() << " " << S.size();
-        if ( pattern[k] == S[i])
+        if ((k < pattern.length()) && pattern[k] == S[i])
             k++;
     }
 }
