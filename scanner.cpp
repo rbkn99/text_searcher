@@ -99,7 +99,6 @@ void scanner::index() {
         }
         update_progress(i++, overall_files_count);
     }
-    update_progress(overall_files_count, overall_files_count);
 }
 
 void scanner::scan(QDir const &dir) {
@@ -109,7 +108,13 @@ void scanner::scan(QDir const &dir) {
     overall_files_count = dir.count();
     emit info_message("Collecting information about files...");
     index();
+    if (cancel_state) {
+        emit info_message("Indexing is canceled");
+        return;
+    }
     overall_text_files_count = (uint)text_file_names.size();
+    update_progress(overall_files_count, overall_files_count);
+    emit info_message("Indexing is finished, printing text file names...");
     emit all_new_text_files(text_file_names);
     emit info_message("Done! Total number of text files: " + QString::number(overall_text_files_count));
     emit indexing_finished();
@@ -156,7 +161,7 @@ void scanner::KMP(const QByteArray &S, const QString &pattern, qint64 S_size, ve
 vector<int> scanner::find_substr(const scanner::Trigrams &tg, const QString &filename, const QString &needle) {
     //qDebug() << filename;
     vector<int> occurrences;
-    auto &file_trigrams = trigrams[filename.toUtf8()];
+    auto file_trigrams = trigrams[filename.toUtf8()];
 
     if (needle.size() < 3) {
         bool found = false;

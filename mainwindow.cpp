@@ -68,7 +68,10 @@ main_window::main_window(QWidget *parent)
     connect(this, SIGNAL(cancel_thread()), &s, SLOT(cancel()));
 }
 
-main_window::~main_window() {}
+main_window::~main_window() {
+    emit cancel_thread();
+    future.waitForFinished();
+}
 
 void main_window::select_directory() {
     QString dir = QFileDialog::getExistingDirectory(this, "Select Directory for Scanning",
@@ -79,10 +82,12 @@ void main_window::select_directory() {
 }
 
 void main_window::print_text_files(const QSet<QString> &names) {
+    int counter = 0;
     for (auto& name : names) {
         auto *f = new QTreeWidgetItem(ui->treeWidget);
         f->setText(0, name);
         ui->treeWidget->addTopLevelItem(f);
+        update_progress_bar(++counter / names.size());
     }
 }
 
@@ -119,14 +124,17 @@ void main_window::search_clicked() {
     }
     ui->searchButton->setEnabled(false);
     clear_gui();
-    QtConcurrent::run(&s, &scanner::search, text);
+    if (!future.isFinished()) {
+        emit cancel_thread();
+    }
+    future = QtConcurrent::run(&s, &scanner::search, text);
 }
 
 void main_window::scan_directory(QString const &dir) {
     emit cancel_thread();
     clear_gui();
     setWindowTitle(QString("Directory - %1").arg(dir));
-    QtConcurrent::run(&s, &scanner::scan, dir);
+    future = QtConcurrent::run(&s, &scanner::scan, dir);
 }
 
 void main_window::update_progress_bar(int value) {
@@ -143,18 +151,6 @@ void main_window::update_window(const QString &filename, const vector<int> &occu
         auto *item = new QTreeWidgetItem(f);
         item->setText(0, QString::number(occur));
     }
-}
-
-QString main_window::convert_to_readable_size(qint64 file_size) {
-    QString abbr[] = {"B", "KB", "MB", "GB", "TB"};
-    auto db_size = (double) file_size;
-    int i = 0;
-    while (db_size / 1024 >= 1) {
-        db_size /= 1024;
-        i++;
-    }
-    db_size = int(db_size * 100) / 100.0;
-    return QString::number(db_size) + " " + abbr[i];
 }
 
 void main_window::indexing_finished() {

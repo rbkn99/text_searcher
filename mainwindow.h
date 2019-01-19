@@ -40,8 +40,8 @@ private slots:
 private:
     std::unique_ptr<Ui::MainWindow> ui;
     scanner s;
+    QFuture<void> future;
     void clear_layout(QLayout * layout);
-    QString convert_to_readable_size(qint64 file_size);
     void clear_gui();
     //QList<QColor> get_row_colors(size_t colors_count);
 };
