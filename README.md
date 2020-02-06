@@ -4,12 +4,14 @@ Fast and easy-to-use desktop app for searching strings in files.  It uses trigra
 
 ### Usage
 
-- `git clone https://github.com/rbkn99/text_searcher`
-- `cd text_searcher`
-- `mkdir text_searcher_build && cd text_searcher_build`
-- `cmake ..`
-- `make`
-- `./text_searcher`
+```bash
+$ git clone https://github.com/rbkn99/text_searcher
+$ cd text_searcher
+$ mkdir text_searcher_build && cd text_searcher_build
+$ cmake ..
+$ make
+$ ./text_searcher
+```
 
 ### Example
 
